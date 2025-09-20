@@ -1,16 +1,35 @@
-# calorie_tracker
+# 🥗 Calorie Tracker App
 
-A new Flutter project.
+A simple **Calorie Tracking App** built with **Flutter** and **Firebase**.  
+The app helps users log their daily food intake, track calories against a daily goal, and visualize their progress.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Features
 
-A few resources to get you started if this is your first Flutter project:
+- Add food items with name + calorie count
+- View daily total calories
+- Progress bar to show how close you are to your daily goal
+- Real-time data sync with **Firebase Firestore**
+- Clean and beginner-friendly project structure
+- (Optional, future) User authentication with Firebase Auth
+- (Optional, future) Charts to visualize weekly calorie trends
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📱 Screenshots
+
+_(Add screenshots of your app UI here once you have them)_
+
+---
+
+## 🛠️ Tech Stack
+
+- **Flutter** (Frontend UI)
+- **Firebase Core** (App initialization)
+- **Firebase Firestore** (Cloud database for food items)
+- **Dart** (Programming language)
+
+---
+
+## 📂 Project Structure
