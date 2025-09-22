@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/food.dart';
-import '../widgets/food_list.dart';
-import '../widgets/progress_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
