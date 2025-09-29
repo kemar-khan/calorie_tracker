@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,6 +17,9 @@ class _SignUpScreenState extends State<SignUpScreen>
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _heightController = TextEditingController();
 
   bool _isLoading = false;
   bool _isPasswordVisible = false;
@@ -76,10 +80,34 @@ class _SignUpScreenState extends State<SignUpScreen>
         );
       }
 
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+
+      //Get User ID
+      final user = userCredential.user;
+
+      try {
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection("users")
+              .doc(user.uid)
+              .set({
+                "name": _nameController.text.trim(),
+                "email": _emailController.text.trim(),
+                "height": _heightController.text.trim(),
+                "weight": _weightController.text.trim(),
+                "age": _ageController.text.trim(),
+                "createdAt": Timestamp.now(),
+              });
+
+          print("User data added to Firestore: ${user.uid}");
+        }
+      } catch (e) {
+        print("Failed to add user data: $e");
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -273,12 +301,55 @@ class _SignUpScreenState extends State<SignUpScreen>
                                 // Name Field
                                 _buildTextField(
                                   controller: _nameController,
-                                  label: 'Full Name',
-                                  hint: 'Enter your full name',
+                                  label: 'Name',
+                                  hint: 'Enter your name',
                                   icon: Icons.person_outline,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
                                       return 'Please enter your name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 18),
+
+                                // Age Field
+                                _buildTextField(
+                                  controller: _ageController,
+                                  label: 'Age',
+                                  hint: 'Enter your age',
+                                  icon: Icons.accessibility_outlined,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your age';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 18),
+
+                                _buildTextField(
+                                  controller: _heightController,
+                                  label: 'Height ',
+                                  hint: 'Enter your height (cm)',
+                                  icon: Icons.height_outlined,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your height';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 18),
+
+                                _buildTextField(
+                                  controller: _weightController,
+                                  label: 'Weight ',
+                                  hint: 'Enter your weight (kg) ',
+                                  icon: Icons.monitor_weight_outlined,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your weight';
                                     }
                                     return null;
                                   },
