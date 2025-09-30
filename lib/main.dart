@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:calorie_tracker/screens/login_screen.dart';
-import 'package:calorie_tracker/screens/home_screen.dart';
+import 'package:calorie_tracker/screens/main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,16 +28,16 @@ class CalorieApp extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasData) {
-            return const HomeScreen(); // User is logged in
+            return const MainScreen(); // ✅ show MainScreen, not HomeScreen
           }
-          return const LoginScreen(); // User is not logged in
+          return const LoginScreen(); // User not logged in
         },
       ),
 
       // 🔑 Define routes here
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(),
+        '/main': (context) => const MainScreen(),
       },
     );
   }

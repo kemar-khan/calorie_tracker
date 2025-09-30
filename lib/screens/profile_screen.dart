@@ -133,13 +133,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
                         ),
                         const Spacer(),
                         const Text(
@@ -151,18 +144,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         ),
                         const Spacer(),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.white),
-                            onPressed: () {
-                              // Navigate to edit profile
-                            },
-                          ),
-                        ),
                       ],
                     ),
                   ),
