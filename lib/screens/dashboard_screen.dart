@@ -1,3 +1,5 @@
+import 'package:calorie_tracker/screens/add_food_screen.dart';
+import 'package:calorie_tracker/widgets/summary_card.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -439,7 +441,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: IconButton(
               icon: const Icon(Icons.add, color: Color(0xFF667eea)),
               onPressed: () {
-                // Quick add food to this meal
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AddFoodScreen()),
+                );
               },
               constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               padding: EdgeInsets.zero,

@@ -1,3 +1,4 @@
+import 'package:calorie_tracker/screens/add_food_screen.dart';
 import 'package:calorie_tracker/screens/recipes_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:calorie_tracker/screens/home_screen.dart';
@@ -102,8 +103,15 @@ class _MainScreenState extends State<MainScreen>
                 title: 'Log Food Manually',
                 subtitle: 'Enter food details manually',
                 onTap: () {
-                  Navigator.pop(context);
-                  // Navigate to manual food entry
+                  Navigator.pop(context); // close bottom sheet if one is open
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AddFoodScreen(), // <-- your new screen
+                    ),
+                  );
                 },
               ),
 

@@ -1,5 +1,5 @@
-import 'package:calorie_tracker/screens/dashboard_screen.dart';
 import 'package:calorie_tracker/screens/profile_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/food.dart';
 
@@ -14,6 +14,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final List<Food> foods = [];
   final foodController = TextEditingController();
   final calorieController = TextEditingController();
+  final currentUser = FirebaseAuth.instance.currentUser!;
   final int dailyGoal = 2000;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -41,14 +42,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void addFood() {
     if (foodController.text.isEmpty || calorieController.text.isEmpty) return;
 
-    setState(() {
-      foods.add(
-        Food(
-          name: foodController.text,
-          calories: int.parse(calorieController.text),
-        ),
-      );
-    });
+    final newFood = Food(
+      id: DateTime.now().millisecondsSinceEpoch.toString(), // temporary id
+      uid: currentUser.uid, // from FirebaseAuth
+      name: foodController.text,
+      calories: int.parse(calorieController.text),
+      servingSize: '1 serving', // default for now
+      mealTime: 'Lunch', // you can add a dropdown later
+      date: DateTime.now(),
+      notes: '',
+    );
 
     foodController.clear();
     calorieController.clear();
