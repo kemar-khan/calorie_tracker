@@ -106,6 +106,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  double calculateBMI(double weightKg, double heightCm) {
+    if (heightCm <= 0) return 0;
+    double heightM = heightCm / 100; // convert cm to meters
+    return weightKg / (heightM * heightM);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -391,9 +397,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                               const SizedBox(width: 16),
                               Expanded(
                                 child: _buildHealthStat(
-                                  'Goal Weight',
-                                  '${_userStats['goalWeight']} kg',
-                                  Icons.flag_outlined,
+                                  'BMI',
+                                  calculateBMI(
+                                    (_userStats['weight'] ?? 0).toDouble(),
+                                    (_userStats['height'] ?? 0).toDouble(),
+                                  ).toStringAsFixed(1), // show 1 decimal place
+                                  Icons.monitor_weight_outlined,
                                   Colors.green,
                                 ),
                               ),

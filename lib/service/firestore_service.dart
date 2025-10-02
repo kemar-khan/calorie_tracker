@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user.dart';
 import '../models/food.dart';
-import '../models/daily_calories.dart';
 
 class FirestoreService {
   final _db = FirebaseFirestore.instance;
@@ -89,49 +88,49 @@ class FirestoreService {
   // DAILY CALORIES METHODS (computed from foods)
   // --------------------------
 
-  Future<int> getTodayConsumedCalories() async {
+  Stream<int> getTodayConsumedCalories() {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('No authenticated user');
+    if (user == null) {
+      return Stream.error(Exception('No authenticated user'));
+    }
     final uid = user.uid;
 
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    try {
-      final snapshot = await _db
-          .collection('foods')
-          .where('uid', isEqualTo: uid)
-          .where('date', isGreaterThanOrEqualTo: startOfDay)
-          .where('date', isLessThan: endOfDay)
-          .get();
-
-      int totalCalories = 0;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        totalCalories += (data['calories'] ?? 0) as int;
-      }
-
-      return totalCalories;
-    } catch (e) {
-      log("Error fetching today's calories: $e");
-      return 0;
-    }
+    return _db
+        .collection('foods')
+        .where('uid', isEqualTo: uid)
+        .where('date', isGreaterThanOrEqualTo: startOfDay)
+        .where('date', isLessThan: endOfDay)
+        .snapshots()
+        .map((snapshot) {
+          int totalCalories = 0;
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            totalCalories += (data['calories'] ?? 0) as int;
+          }
+          return totalCalories;
+        });
   }
 
-  Future<int> getDailyGoal() async {
+  Stream<int> getDailyGoal() {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('No authenticated user');
+    if (user == null) {
+      return Stream.error(Exception('No authenticated user'));
+    }
     final uid = user.uid;
 
-    final doc = await _db.collection('users').doc(uid).get();
-    if (doc.exists && doc.data() != null) {
-      final data = doc.data()!;
-      return (data['dailyGoal'] is int)
-          ? data['dailyGoal'] as int
-          : int.tryParse(data['dailyGoal'].toString()) ?? 2000;
-    }
-    return 2000; // default fallback
+    return _db.collection('users').doc(uid).snapshots().map((doc) {
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        return (data['dailyGoal'] is int)
+            ? data['dailyGoal'] as int
+            : int.tryParse(data['dailyGoal'].toString()) ?? 2000;
+      }
+      return 2000; // default fallback
+    });
   }
 
   Future<void> updateDailyGoal(int newGoal) async {
@@ -172,5 +171,55 @@ class FirestoreService {
         .where('date', isGreaterThanOrEqualTo: startOfDay)
         .where('date', isLessThan: endOfDay)
         .snapshots();
+  }
+
+  Stream<Map<String, List<Map<String, dynamic>>>> getFoodsByMeal() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("No authenticated user");
+
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return FirebaseFirestore.instance
+        .collection('foods')
+        .where('uid', isEqualTo: user.uid)
+        .where('date', isGreaterThanOrEqualTo: startOfDay)
+        .where('date', isLessThan: endOfDay)
+        .snapshots()
+        .map((snapshot) {
+          final Map<String, List<Map<String, dynamic>>> grouped = {};
+
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            final meal = data['mealTime'] ?? 'Other';
+            grouped.putIfAbsent(meal, () => []);
+            grouped[meal]!.add(data);
+          }
+
+          return grouped;
+        });
+  }
+
+  Stream<List<Map<String, dynamic>>> getRecentFoods() {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user');
+    final uid = user.uid;
+
+    return _db
+        .collection('foods')
+        .where('uid', isEqualTo: uid)
+        .orderBy('date', descending: true) // latest first
+        .limit(5) // only fetch last 5
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'name': data['name'] ?? 'Unknown',
+              'calories': data['calories'] ?? 0,
+            };
+          }).toList();
+        });
   }
 }

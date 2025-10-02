@@ -18,17 +18,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final int dailyGoal = 2000;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
+  // Meal breakdown
+  int get breakfastCals => foods
+      .where((f) => f.mealTime == 'Breakfast')
+      .fold(0, (sum, f) => sum + f.calories);
+  int get lunchCals => foods
+      .where((f) => f.mealTime == 'Lunch')
+      .fold(0, (sum, f) => sum + f.calories);
+  int get dinnerCals => foods
+      .where((f) => f.mealTime == 'Dinner')
+      .fold(0, (sum, f) => sum + f.calories);
+  int get snacksCals => foods
+      .where((f) => f.mealTime == 'Snack')
+      .fold(0, (sum, f) => sum + f.calories);
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _animationController.forward();
   }
 
   @override
@@ -43,28 +62,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (foodController.text.isEmpty || calorieController.text.isEmpty) return;
 
     final newFood = Food(
-      id: DateTime.now().millisecondsSinceEpoch.toString(), // temporary id
-      uid: currentUser.uid, // from FirebaseAuth
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      uid: currentUser.uid,
       name: foodController.text,
       calories: int.parse(calorieController.text),
-      servingSize: '1 serving', // default for now
-      mealTime: 'Lunch', // you can add a dropdown later
+      servingSize: '1 serving',
+      mealTime: 'Lunch',
       date: DateTime.now(),
       notes: '',
     );
+
+    setState(() {
+      foods.add(newFood);
+    });
 
     foodController.clear();
     calorieController.clear();
     Navigator.pop(context);
     _animationController.forward().then((_) => _animationController.reset());
-  }
-
-  void _navigateToProfile() {
-    // Navigate to profile screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ProfileScreen()),
-    );
   }
 
   int get totalCalories {
@@ -76,10 +91,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Color get progressColor {
-    if (progressPercentage <= 0.5) return Colors.green;
-    if (progressPercentage <= 0.8) return Colors.orange;
-    return Colors.red;
+    if (progressPercentage <= 0.5) return const Color(0xFF4CAF50);
+    if (progressPercentage <= 0.8) return const Color(0xFFFF9800);
+    return const Color(0xFFF44336);
   }
+
+  int get remainingCalories => dailyGoal - totalCalories;
 
   @override
   Widget build(BuildContext context) {
@@ -88,9 +105,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // Modern App Bar with gradient and profile icon
+            // Compact Modern App Bar
             SliverAppBar(
-              expandedHeight: 85,
+              expandedHeight: 80,
               floating: false,
               pinned: true,
               elevation: 0,
@@ -105,51 +122,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 child: FlexibleSpaceBar(
-                  centerTitle: true,
+                  titlePadding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    bottom: 16,
+                  ),
                   title: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Title
-                      const Expanded(
-                        child: Text(
-                          'Calorie Tracker',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontWeight:
-                                FontWeight.w600, // modern medium-semi bold
-                            fontSize: 17, // slightly larger for balance
-                            letterSpacing: 0.8, // wider spacing for elegance
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hello, ${currentUser.displayName ?? 'User'}!',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Track Your Journey',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
-
-                      // Profile Button - glassmorphism style
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ProfileScreen(),
+                              builder: (context) => const ProfileScreen(),
                             ),
                           );
                         },
                         child: Container(
-                          margin: const EdgeInsets.only(right: 14),
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(
-                              0.15,
-                            ), // glassy look
+                            color: Colors.white.withOpacity(0.15),
                             border: Border.all(
                               color: Colors.white.withOpacity(0.3),
-                              width: 1,
+                              width: 1.5,
                             ),
                           ),
                           child: const Icon(
-                            Icons.person,
+                            Icons.person_outline,
                             color: Colors.white,
                             size: 20,
                           ),
@@ -157,172 +182,112 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
-                  titlePadding: const EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    bottom: 14,
+                ),
+              ),
+            ),
+
+            // Main Content
+            SliverToBoxAdapter(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Hero Card - Calorie Summary
+                      ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: _buildHeroCard(),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Quick Stats Row
+                      _buildQuickStatsRow(),
+                      const SizedBox(height: 24),
+
+                      // Meal Breakdown Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Meals Today',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3436),
+                            ),
+                          ),
+                          if (foods.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  foods.clear();
+                                });
+                              },
+                              icon: const Icon(Icons.clear_all, size: 16),
+                              label: const Text('Clear'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey.shade600,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Meal Cards
+                      _buildMealCard(
+                        'Breakfast',
+                        Icons.wb_sunny_outlined,
+                        breakfastCals,
+                        Colors.orange,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMealCard(
+                        'Lunch',
+                        Icons.restaurant_outlined,
+                        lunchCals,
+                        Colors.green,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMealCard(
+                        'Dinner',
+                        Icons.dinner_dining_outlined,
+                        dinnerCals,
+                        Colors.blue,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMealCard(
+                        'Snacks',
+                        Icons.cookie_outlined,
+                        snacksCals,
+                        Colors.purple,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Recent Foods Section
+                      if (foods.isNotEmpty) ...[
+                        const Text(
+                          'Recent Foods',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D3436),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ],
                   ),
                 ),
               ),
             ),
 
-            // Main content
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Daily Progress Card
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Today\'s Progress',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2D3436),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: progressColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '${(progressPercentage * 100).toInt()}%',
-                                  style: TextStyle(
-                                    color: progressColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Circular Progress Indicator
-                          Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              SizedBox(
-                                width: 120,
-                                height: 120,
-                                child: CircularProgressIndicator(
-                                  value: progressPercentage.clamp(0.0, 1.0),
-                                  strokeWidth: 8,
-                                  backgroundColor: Colors.grey.shade200,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    progressColor,
-                                  ),
-                                ),
-                              ),
-                              Column(
-                                children: [
-                                  Text(
-                                    '$totalCalories',
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2D3436),
-                                    ),
-                                  ),
-                                  Text(
-                                    'of $dailyGoal cal',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Stats Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildStatItem(
-                                'Remaining',
-                                '${dailyGoal - totalCalories}',
-                                Icons.flag_outlined,
-                              ),
-                              Container(
-                                width: 1,
-                                height: 40,
-                                color: Colors.grey.shade200,
-                              ),
-                              _buildStatItem(
-                                'Foods',
-                                '${foods.length}',
-                                Icons.restaurant_outlined,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Foods Section Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Today\'s Meals',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2D3436),
-                          ),
-                        ),
-                        if (foods.isNotEmpty)
-                          TextButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                foods.clear();
-                              });
-                            },
-                            icon: const Icon(Icons.clear_all, size: 18),
-                            label: const Text('Clear All'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey.shade600,
-                            ),
-                          ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-
-            // Foods List
+            // Recent Foods List
             foods.isEmpty
                 ? SliverToBoxAdapter(
                     child: Container(
@@ -331,34 +296,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                        border: Border.all(color: Colors.grey.shade100),
                       ),
                       child: Column(
                         children: [
-                          Icon(
-                            Icons.restaurant_menu_outlined,
-                            size: 64,
-                            color: Colors.grey.shade400,
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF667eea).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.restaurant_menu_outlined,
+                              size: 48,
+                              color: const Color(0xFF667eea),
+                            ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                           Text(
-                            'No meals added yet',
+                            'No meals logged yet',
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap the + button to add your first meal',
-                            style: TextStyle(color: Colors.grey.shade500),
+                            'Start tracking your nutrition journey',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade500,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -373,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           vertical: 6,
                         ),
                         child: Dismissible(
-                          key: Key(food.name + index.toString()),
+                          key: Key(food.id),
                           background: Container(
                             decoration: BoxDecoration(
                               color: Colors.red,
@@ -392,224 +362,360 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               foods.removeAt(index);
                             });
                           },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF667eea,
-                                    ).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.restaurant,
-                                    color: Color(0xFF667eea),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        food.name,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF2D3436),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${food.calories} calories',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '${food.calories}',
-                                    style: const TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          child: _buildFoodCard(food),
                         ),
                       );
                     }, childCount: foods.length),
                   ),
 
-            // Bottom padding for navigation bar
-            const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
     );
   }
 
-  void _showAddFoodModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+  Widget _buildHeroCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
         ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF667eea).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
               const Text(
-                'Add Food',
+                'Daily Goal',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3436),
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Food name field
               Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
                 ),
-                child: TextField(
-                  controller: foodController,
-                  decoration: const InputDecoration(
-                    labelText: "Food name",
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(16),
-                    prefixIcon: Icon(Icons.restaurant),
+                child: Text(
+                  '${(progressPercentage * 100).toInt()}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Calories field
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: TextField(
-                  controller: calorieController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: "Calories",
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(16),
-                    prefixIcon: Icon(Icons.local_fire_department),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Add button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: addFood,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF667eea),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Add Food',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
             ],
           ),
-        ),
+          const SizedBox(height: 20),
+
+          // Large Circular Progress
+          SizedBox(
+            width: 160,
+            height: 160,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 160,
+                  height: 160,
+                  child: CircularProgressIndicator(
+                    value: progressPercentage.clamp(0.0, 1.0),
+                    strokeWidth: 12,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.white,
+                    ),
+                  ),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '$totalCalories',
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'of $dailyGoal kcal',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Remaining Calories
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.flag, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  remainingCalories > 0
+                      ? '$remainingCalories kcal remaining'
+                      : 'Goal exceeded by ${remainingCalories.abs()} kcal',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Column(
+  Widget _buildQuickStatsRow() {
+    return Row(
       children: [
-        Icon(icon, color: Colors.grey.shade600, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2D3436),
+        Expanded(
+          child: _buildStatCard(
+            'Consumed',
+            totalCalories.toString(),
+            Icons.restaurant,
+            Colors.blue,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            'Foods',
+            foods.length.toString(),
+            Icons.dining,
+            Colors.orange,
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D3436),
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMealCard(
+    String mealName,
+    IconData icon,
+    int calories,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mealName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3436),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$calories kcal',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$calories',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFoodCard(Food food) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF667eea).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.restaurant,
+              color: Color(0xFF667eea),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  food.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3436),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 12, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      food.mealTime,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(
+                      Icons.local_fire_department,
+                      size: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${food.calories} cal',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${food.calories}',
+              style: const TextStyle(
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

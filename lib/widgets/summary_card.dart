@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SummaryCard extends StatelessWidget {
-  const SummaryCard({Key? key}) : super(key: key);
+  const SummaryCard({super.key});
 
   // Helper for building each column
   Widget _buildStatColumn(

@@ -1,6 +1,6 @@
 import 'package:calorie_tracker/screens/add_food_screen.dart';
-import 'package:calorie_tracker/widgets/summary_card.dart';
 import 'package:flutter/material.dart';
+import '../service/firestore_service.dart';
 import 'dart:math' as math;
 
 class DashboardScreen extends StatefulWidget {
@@ -14,6 +14,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+  final FirestoreService firestoreService = FirestoreService();
 
   // Sample data - replace with actual data from your database
   final int dailyGoal = 2000;
@@ -134,42 +136,53 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const SizedBox(height: 20),
 
                       // Meal Breakdown Section
-                      const Text(
-                        'Meal Breakdown',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3436),
-                        ),
+                      StreamBuilder<Map<String, List<Map<String, dynamic>>>>(
+                        stream: firestoreService.getFoodsByMeal(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          final meals = snapshot.data!;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Meal Breakdown',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D3436),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              ...meals.entries.map((entry) {
+                                final mealName = entry.key;
+                                final foods = entry.value;
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _buildMealCard(
+                                    mealName,
+                                    _getMealIcon(mealName),
+                                    foods.fold<int>(
+                                      0,
+                                      (sum, food) =>
+                                          sum + (food['calories'] as int),
+                                    ),
+                                    _getMealEmoji(mealName),
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          );
+                        },
                       ),
-                      const SizedBox(height: 16),
-                      _buildMealCard(
-                        'Breakfast',
-                        Icons.egg_outlined,
-                        breakfast,
-                        '🍳',
-                      ),
-                      const SizedBox(height: 12),
-                      _buildMealCard(
-                        'Lunch',
-                        Icons.rice_bowl_outlined,
-                        lunch,
-                        '🍛',
-                      ),
-                      const SizedBox(height: 12),
-                      _buildMealCard(
-                        'Dinner',
-                        Icons.dinner_dining_outlined,
-                        dinner,
-                        '🍲',
-                      ),
-                      const SizedBox(height: 12),
-                      _buildMealCard(
-                        'Snacks',
-                        Icons.cookie_outlined,
-                        snacks,
-                        '🍫',
-                      ),
+
                       const SizedBox(height: 24),
 
                       // Macronutrient Breakdown
@@ -196,6 +209,36 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ),
     );
+  }
+
+  IconData _getMealIcon(String mealName) {
+    switch (mealName.toLowerCase()) {
+      case 'breakfast':
+        return Icons.egg_outlined;
+      case 'lunch':
+        return Icons.rice_bowl_outlined;
+      case 'dinner':
+        return Icons.dinner_dining_outlined;
+      case 'snacks':
+        return Icons.cookie_outlined;
+      default:
+        return Icons.fastfood; // fallback
+    }
+  }
+
+  String _getMealEmoji(String mealName) {
+    switch (mealName.toLowerCase()) {
+      case 'breakfast':
+        return '🍳';
+      case 'lunch':
+        return '🍛';
+      case 'dinner':
+        return '🍲';
+      case 'snacks':
+        return '🍫';
+      default:
+        return '🥗';
+    }
   }
 
   Widget _buildMotivationCard() {
@@ -259,82 +302,125 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildDailySummaryCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Today\'s Progress',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3436),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: progressColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${(progressPercentage * 100).toInt()}%',
-                  style: TextStyle(
-                    color: progressColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+    final firestoreService = FirestoreService();
 
-          // Stats
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStatColumn(
-                'Consumed',
-                '$totalConsumed',
-                Icons.restaurant,
-                Colors.blue,
+    return StreamBuilder<int>(
+      stream: firestoreService.getTodayConsumedCalories(),
+      builder: (context, consumedSnapshot) {
+        if (consumedSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (consumedSnapshot.hasError) {
+          return Text("Error: ${consumedSnapshot.error}");
+        }
+
+        final consumed = consumedSnapshot.data ?? 0;
+
+        return StreamBuilder<int>(
+          stream: firestoreService.getDailyGoal(),
+          builder: (context, goalSnapshot) {
+            if (goalSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (goalSnapshot.hasError) {
+              return Text("Error: ${goalSnapshot.error}");
+            }
+
+            final goal = goalSnapshot.data ?? 2000;
+            final remaining = goal - consumed;
+            final progress = (goal > 0) ? (consumed / goal) : 0.0;
+
+            Color progressColor;
+            if (progress < 0.5) {
+              progressColor = Colors.green;
+            } else if (progress < 1.0) {
+              progressColor = Colors.orange;
+            } else {
+              progressColor = Colors.red;
+            }
+
+            return Card(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              Container(width: 1, height: 50, color: Colors.grey.shade200),
-              _buildStatColumn(
-                'Remaining',
-                '$remainingCalories',
-                Icons.flag,
-                progressColor,
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Today\'s Progress',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D3436),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: progressColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${(progress * 100).toInt()}%',
+                            style: TextStyle(
+                              color: progressColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatColumn(
+                          'Consumed',
+                          '$consumed',
+                          Icons.restaurant,
+                          Colors.blue,
+                        ),
+                        Container(
+                          width: 1,
+                          height: 50,
+                          color: Colors.grey.shade200,
+                        ),
+                        _buildStatColumn(
+                          'Remaining',
+                          '$remaining',
+                          Icons.flag,
+                          progressColor,
+                        ),
+                        Container(
+                          width: 1,
+                          height: 50,
+                          color: Colors.grey.shade200,
+                        ),
+                        _buildStatColumn(
+                          'Goal',
+                          '$goal',
+                          Icons.track_changes,
+                          Colors.purple,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              Container(width: 1, height: 50, color: Colors.grey.shade200),
-              _buildStatColumn(
-                'Goal',
-                '$dailyGoal',
-                Icons.track_changes,
-                Colors.purple,
-              ),
-            ],
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -625,40 +711,56 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildRecentFoodsCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Recent Foods',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3436),
-                ),
+    final firestoreService = FirestoreService();
+
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: firestoreService.getRecentFoods(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Text("Error: ${snapshot.error}");
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Text("No recent foods yet.");
+        }
+
+        final recentFoods = snapshot.data!;
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
               ),
-              TextButton(onPressed: () {}, child: const Text('View All')),
             ],
           ),
-          const SizedBox(height: 12),
-          ...recentFoods
-              .take(5)
-              .map(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Recent Foods',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3436),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // 🔹 Build recent food list from Firestore
+              ...recentFoods.map(
                 (food) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
@@ -698,7 +800,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                         icon: const Icon(Icons.add_circle_outline, size: 20),
                         color: const Color(0xFF667eea),
                         onPressed: () {
-                          // Quick add this food
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddFoodScreen(),
+                            ),
+                          );
                         },
                         constraints: const BoxConstraints(
                           minWidth: 32,
@@ -710,8 +817,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
               ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
